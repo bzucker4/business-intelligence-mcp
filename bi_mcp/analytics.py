@@ -60,6 +60,9 @@ def search_records(dataset: str, query: str, column: str | None = None, limit: i
     if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= MAX_SEARCH_RESULTS:
         raise ValueError(f"Limit must be an integer between 1 and {MAX_SEARCH_RESULTS}.")
     headers, rows = load_dataset(dataset)
+    # MCP clients may submit an empty string for an omitted optional field.
+    if column is not None and not column.strip():
+        column = None
     if column is not None and column not in headers:
         raise ValueError(f"Unknown column '{column}'. Available columns: {headers}")
     needle = query.casefold()
