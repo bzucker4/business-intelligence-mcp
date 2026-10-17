@@ -1,7 +1,14 @@
 """Remote MCP server exposing read-only CSV analytics tools."""
 import os
 from mcp.server.fastmcp import FastMCP
-from bi_mcp.analytics import list_datasets as _list, search_records as _search, analyze_dataset as _analyze, detect_anomalies as _anomalies, generate_report as _report
+from mcp.server.transport_security import TransportSecuritySettings
+from bi_mcp.analytics import (
+    list_datasets as _list,
+    search_records as _search,
+    analyze_dataset as _analyze,
+    detect_anomalies as _anomalies,
+    generate_report as _report,
+)
 
 mcp = FastMCP("Business Intelligence MCP Connector")
 
@@ -32,6 +39,10 @@ def generate_report(dataset: str) -> dict:
 
 if __name__ == "__main__":
     hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost")
-    from mcp.server.transport_security import TransportSecuritySettings
-    security = TransportSecuritySettings(allowed_hosts=[hostname, f"{hostname}:*"])
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=int(os.environ.get("PORT", "10000")), transport_security=security)
+    mcp.settings.host = "0.0.0.0"
+    mcp.settings.port = int(os.environ.get("PORT", "10000"))
+    mcp.settings.transport_security = TransportSecuritySettings(
+        allowed_hosts=[hostname, f"{hostname}:*"]
+    )
+    # FastMCP.run() reads host, port, and transport security from mcp.settings.
+    mcp.run(transport="streamable-http")
