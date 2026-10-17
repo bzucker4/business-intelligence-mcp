@@ -1,5 +1,6 @@
 """Remote MCP server exposing read-only CSV analytics tools."""
 import os
+import json
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from bi_mcp.analytics import (
@@ -15,27 +16,27 @@ mcp = FastMCP("Business Intelligence MCP Connector")
 @mcp.tool()
 def list_datasets() -> dict:
     """List CSV datasets bundled in the data folder, including row counts and columns."""
-    return {"datasets": _list()}
+    return json.dumps({"datasets": _list()}, ensure_ascii=False)
 
 @mcp.tool()
 def search_records(dataset: str, query: str, column: str | None = None, limit: int = 10) -> dict:
     """Search CSV records case-insensitively. Optionally restrict search to one column."""
-    return _search(dataset, query, column, limit)
+    return json.dumps(_search(dataset, query, column, limit), ensure_ascii=False)
 
 @mcp.tool()
 def analyze_dataset(dataset: str, column: str) -> dict:
     """Calculate descriptive statistics for a numeric column, ignoring non-numeric cells."""
-    return _analyze(dataset, column)
+    return json.dumps(_analyze(dataset, column), ensure_ascii=False)
 
 @mcp.tool()
 def detect_anomalies(dataset: str, column: str) -> dict:
     """Flag numeric outliers using 1.5×IQR fences; flags are not proof of errors."""
-    return _anomalies(dataset, column)
+    return json.dumps(_anomalies(dataset, column), ensure_ascii=False)
 
 @mcp.tool()
 def generate_report(dataset: str) -> dict:
     """Generate an evidence-based summary of CSV columns, numeric values, and empty cells."""
-    return _report(dataset)
+    return json.dumps(_report(dataset), ensure_ascii=False)
 
 if __name__ == "__main__":
     hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost")
