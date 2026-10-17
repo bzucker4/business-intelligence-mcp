@@ -45,10 +45,14 @@ def _number(value: str) -> float | None:
 
 
 def list_datasets() -> list[dict[str, Any]]:
+    # Use directory iteration rather than glob so packaged CSV files are discovered consistently.
+    if not DATA_DIR.is_dir():
+        return []
     results = []
-    for path in sorted(DATA_DIR.glob("*.csv")):
-        headers, rows = load_dataset(path.stem)
-        results.append({"name": path.stem, "rows": len(rows), "columns": headers})
+    for path in sorted(DATA_DIR.iterdir(), key=lambda item: item.name.casefold()):
+        if path.is_file() and path.suffix.casefold() == ".csv":
+            headers, rows = load_dataset(path.stem)
+            results.append({"name": path.stem, "rows": len(rows), "columns": headers})
     return results
 
 
@@ -71,7 +75,8 @@ def search_records(dataset: str, query: str, column: str | None = None, limit: i
         values = [row.get(column, "")] if column else row.values()
         if any(needle in str(value).casefold() for value in values):
             matches.append(row)
-    return {"dataset": dataset, "query": query, "matched_count": len(matches), "returned_count": min(limit, len(matches)), "records": matches[:limit], "truncated": len(matches) > limit}
+    returned = list(matches[:limit])
+    return {"dataset": dataset, "query": query, "matched_count": len(matches), "returned_count": len(returned), "records": returned, "truncated": len(matches) > limit}
 
 
 def analyze_dataset(dataset: str, column: str) -> dict[str, Any]:
