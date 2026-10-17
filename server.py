@@ -16,27 +16,27 @@ mcp = FastMCP("Business Intelligence MCP Connector")
 @mcp.tool()
 def list_datasets() -> dict:
     """List CSV datasets bundled in the data folder, including row counts and columns."""
-    return json.dumps({"datasets": _list()}, ensure_ascii=False)
+    return {"datasets": _list()}
 
 @mcp.tool()
 def search_records(dataset: str, query: str, column: str | None = None, limit: int = 10) -> dict:
     """Search CSV records case-insensitively. Optionally restrict search to one column."""
-    return json.dumps(_search(dataset, query, column, limit), ensure_ascii=False)
+    return _search(dataset, query, column, limit)
 
 @mcp.tool()
 def analyze_dataset(dataset: str, column: str) -> dict:
     """Calculate descriptive statistics for a numeric column, ignoring non-numeric cells."""
-    return json.dumps(_analyze(dataset, column), ensure_ascii=False)
+    return _analyze(dataset, column)
 
 @mcp.tool()
 def detect_anomalies(dataset: str, column: str) -> dict:
     """Flag numeric outliers using 1.5×IQR fences; flags are not proof of errors."""
-    return json.dumps(_anomalies(dataset, column), ensure_ascii=False)
+    return _anomalies(dataset, column)
 
 @mcp.tool()
 def generate_report(dataset: str) -> dict:
     """Generate an evidence-based summary of CSV columns, numeric values, and empty cells."""
-    return json.dumps(_report(dataset), ensure_ascii=False)
+    return _report(dataset)
 
 @mcp.tool()
 def diagnose_data() -> dict:
