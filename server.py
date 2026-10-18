@@ -1,6 +1,5 @@
 """Remote MCP server exposing read-only CSV analytics tools."""
 import os
-import json
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from bi_mcp.analytics import (
@@ -37,22 +36,6 @@ def detect_anomalies(dataset: str, column: str) -> dict:
 def generate_report(dataset: str) -> dict:
     """Generate an evidence-based summary of CSV columns, numeric values, and empty cells."""
     return _report(dataset)
-
-@mcp.tool()
-def diagnose_data() -> dict:
-    """Diagnose the deployed CSV directory and report which files the running server can see."""
-    from pathlib import Path
-    from bi_mcp import analytics
-    data_dir = Path(analytics.DATA_DIR)
-    files = sorted(p.name for p in data_dir.iterdir() if p.is_file()) if data_dir.is_dir() else []
-    return json.dumps({
-        "server_file": str(Path(__file__).resolve()),
-        "data_dir": str(data_dir.resolve()),
-        "data_dir_exists": data_dir.is_dir(),
-        "csv_files": [name for name in files if name.lower().endswith(".csv")],
-        "sales_sample_exists": (data_dir / "sales_sample.csv").is_file(),
-        "datasets_function_result": _list(),
-    }, ensure_ascii=False)
 
 if __name__ == "__main__":
     hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost")
