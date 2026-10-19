@@ -1,30 +1,53 @@
 # Business Intelligence Copilot
 
-A small-business sales analysis demo powered by a read-only Model Context Protocol (MCP) server. The web preview and printable report use only the bundled fictional `sales_sample.csv` dataset.
+A small-business data-analysis demonstration powered by a read-only Model Context Protocol (MCP) server. It analyzes only the fictional CSV file bundled with the service; it does **not** accept uploads or connect to customer business systems.
 
-## Customer-facing demo
+## Live demo
 
-- **Demo overview:** the service root URL, for example `https://YOUR-SERVICE.onrender.com/`
-- **Printable sample report:** `https://YOUR-SERVICE.onrender.com/sample-report` (use **Print / Save PDF** in the report toolbar)
-- **MCP endpoint:** `https://YOUR-SERVICE.onrender.com/mcp`
+- **Interactive overview:** https://business-intelligence-mcp-gq49.onrender.com/
+- **Printable sample report:** https://business-intelligence-mcp-gq49.onrender.com/sample-report
+- **MCP endpoint (Streamable HTTP):** https://business-intelligence-mcp-gq49.onrender.com/mcp
+- **Privacy policy:** https://business-intelligence-mcp-gq49.onrender.com/privacy
+- **Support:** https://business-intelligence-mcp-gq49.onrender.com/support
+- **Source code and issue tracker:** https://github.com/bzucker4/business-intelligence-mcp
 
-The overview is a sample-data showcase, not a live analytics dashboard. It does not accept uploads or display customer data. The report labels the data as illustrative and explains the limits of the findings.
+## What it does
 
-## MCP tools
+The server exposes five read-only tools:
 
-- `list_datasets`: list CSV datasets, row counts, and columns.
-- `search_records`: case-insensitive search with bounded results.
-- `analyze_dataset`: descriptive statistics for a numeric column.
-- `detect_anomalies`: flags outliers using the 1.5×IQR rule. Flags are not proof of errors.
-- `generate_report`: dataset dimensions, numeric summaries, and empty-cell counts.
+| Tool | Purpose |
+| --- | --- |
+| `list_datasets` | Lists bundled CSV datasets, row counts, and column names. |
+| `search_records` | Searches sample records case-insensitively, optionally within one column. |
+| `analyze_dataset` | Calculates numeric count, sum, mean, median, minimum, and maximum. |
+| `detect_anomalies` | Flags numeric outliers using 1.5×IQR fences. Flags are not proof of errors. |
+| `generate_report` | Summarizes dataset dimensions, numeric columns, and empty cells. |
 
-## Safety
+Tool annotations explicitly mark the tools read-only, non-destructive, repeatable, and limited to the local bundled sample dataset.
 
-**This demo has no authentication.** Anyone who can reach the public MCP endpoint can call its tools. Use sample data only until authentication and access controls are added. The server only reads CSV files included in the deployed `data/` folder. Do not upload or expose private customer data.
+## Three example prompts
 
-## Local test (optional)
+These prompts are designed to work against the bundled `sales_sample` dataset.
 
-Python 3.10+ recommended.
+1. **Discover the dataset:** “List the available datasets and report the row and column counts.”  
+   Expected result: one dataset named `sales_sample`, with 20 rows and 7 columns.
+
+2. **Analyze revenue:** “Analyze the revenue column in sales_sample and report its sum, mean, and median.”  
+   Expected result: sum **13,410**, mean **670.5**, and median **215**. The high mean is affected by the 9,000 revenue record; the median is less sensitive to that value.
+
+3. **Search and review outliers:** “Find records containing Widget A, then flag unusual revenue values in sales_sample and explain why flagged values should be reviewed rather than automatically treated as errors.”  
+   Expected result: 7 Widget A matches. The IQR method flags revenue values 420, 450, and 9,000 for review. A statistical flag is not evidence of a data-entry error.
+
+## Privacy and scope
+
+- The deployed dataset is fictional and included in the repository.
+- The service does not accept file uploads, read Claude conversations or uploaded files, or connect to private business systems.
+- The current deployment has no authentication. Anyone who can reach the public endpoint can call the sample-data tools. Do not add private data to the deployed `data/` directory.
+- Review the [privacy policy](https://business-intelligence-mcp-gq49.onrender.com/privacy) before use.
+
+## Local setup and tests
+
+Python 3.10+ is recommended.
 
 ```bash
 python -m pip install -r requirements.txt
@@ -32,27 +55,31 @@ python -m unittest discover -s tests -v
 python server.py
 ```
 
-Local web demo: `http://localhost:10000/`  
-Local report: `http://localhost:10000/sample-report`  
-Local MCP endpoint: `http://localhost:10000/mcp`
+Local pages:
+- Demo: http://localhost:10000/
+- Sample report: http://localhost:10000/sample-report
+- Privacy: http://localhost:10000/privacy
+- Support: http://localhost:10000/support
+- MCP endpoint: http://localhost:10000/mcp
 
-Use the official [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) for protocol-level testing; a browser GET to the MCP endpoint is not enough.
+Use the official [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) for protocol-level testing. Opening `/mcp` in a browser is not a sufficient MCP test.
 
-## Deploy from a Chromebook
+## Deployment
 
-1. Push all project files and folders to this repository, preserving paths.
-2. On Render, choose **New → Web Service** and connect this repository, or let the existing connected service redeploy from the main branch.
-3. Set build command to `pip install -r requirements.txt` and start command to `python server.py`.
-4. Confirm the service is live and inspect logs. Render supplies `PORT` and `RENDER_EXTERNAL_HOSTNAME` automatically.
-5. Open the service root to verify the demo, then open `/sample-report` and `/mcp` as appropriate.
-6. The remote MCP endpoint is the service URL plus `/mcp`. Use that URL in ChatGPT or Claude connector settings.
+Render uses the repository's `render.yaml`:
+- Build command: `pip install -r requirements.txt`
+- Start command: `python server.py`
+- Health check: `/`
+
+After a deployment, verify the homepage, printable report, privacy page, support page, and the remote MCP protocol with MCP Inspector.
 
 ## Troubleshooting
 
-- Build failure: check logs and confirm `requirements.txt` is at the repository root.
-- Startup failure: confirm `python server.py` and inspect logs.
-- Host rejected: verify `RENDER_EXTERNAL_HOSTNAME` matches the assigned hostname.
-- Slow first request: free instances may sleep while idle.
-- Dataset not found: use the CSV filename without `.csv`; only files in the deployed `data/` folder are listed.
+- **Build failure:** inspect Render build logs and confirm `requirements.txt` is at the repository root.
+- **Startup failure:** confirm the start command is `python server.py` and inspect service logs.
+- **Host rejected:** verify `RENDER_EXTERNAL_HOSTNAME` matches the assigned hostname.
+- **Slow first request:** a free instance may sleep while idle.
+- **Dataset not found:** use the CSV filename without `.csv`; only CSV files in the deployed `data/` directory are listed.
+- **Tool connection failure:** test the full `/mcp` endpoint using MCP Inspector and inspect the server logs.
 
-Validate results against source records before making business decisions.
+Validate outputs against source records before making business decisions.
