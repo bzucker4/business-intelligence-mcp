@@ -1,0 +1,87 @@
+name: Remote MCP Inspector Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/remote-mcp-inspector.yml"
+      - "server.py"
+      - "bi_mcp/**"
+      - "data/**"
+
+jobs:
+  inspector:
+    name: Verify live MCP endpoint with official Inspector CLI
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      MCP_URL: https://business-intelligence-mcp-gq49.onrender.com/mcp
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.19.0"
+
+      - name: Verify MCP initialization handshake
+        run: |
+          set -euo pipefail
+          npx --yes @modelcontextprotocol/inspector@latest --cli \
+            --transport http --server-url "$MCP_URL" \
+            --method initialize --format json | tee /tmp/mcp-initialize.json
+          jq -e '.result.serverInfo.name != null and .result.protocolVersion != null' /tmp/mcp-initialize.json
+
+      - name: Verify all five tools are discoverable
+        run: |
+          set -euo pipefail
+          npx --yes @modelcontextprotocol/inspector@latest --cli \
+            --transport http --server-url "$MCP_URL" \
+            --method tools/list --strict --format json | tee /tmp/mcp-tools.json
+          jq -e '[.result.tools[].name] | sort == ["analyze_dataset","detect_anomalies","generate_report","list_datasets","search_records"]' /tmp/mcp-tools.json
+
+      - name: Call list_datasets through MCP Inspector
+        run: |
+          set -euo pipefail
+          npx --yes @modelcontextprotocol/inspector@latest --cli \
+            --transport http --server-url "$MCP_URL" \
+            --method tools/call --tool-name list_datasets --format json | tee /tmp/list-datasets.json
+          jq -e '.result.content[0].text | fromjson | .datasets | any(.name == "sales_sample" and .rows == 20 and (.columns | length == 7))' /tmp/list-datasets.json
+
+      - name: Call search_records through MCP Inspector
+        run: |
+          set -euo pipefail
+          npx --yes @modelcontextprotocol/inspector@latest --cli \
+            --transport http --server-url "$MCP_URL" \
+            --method tools/call --tool-name search_records \
+            --tool-args-json '{"dataset":"sales_sample","query":"Widget A","limit":10}' \
+            --format json | tee /tmp/search-records.json
+          jq -e '.result.content[0].text | fromjson | .matched_count == 7 and .returned_count == 7' /tmp/search-records.json
+
+      - name: Call analyze_dataset through MCP Inspector
+        run: |
+          set -euo pipefail
+          npx --yes @modelcontextprotocol/inspector@latest --cli \
+            --transport http --server-url "$MCP_URL" \
+            --method tools/call --tool-name analyze_dataset \
+            --tool-args-json '{"dataset":"sales_sample","column":"revenue"}' \
+            --format json | tee /tmp/analyze-dataset.json
+          jq -e '.result.content[0].text | fromjson | .row_count == 20 and .sum == 13410 and .mean == 670.5 and .median == 215' /tmp/analyze-dataset.json
+
+      - name: Call detect_anomalies through MCP Inspector
+        run: |
+          set -euo pipefail
+          npx --yes @modelcontextprotocol/inspector@latest --cli \
+            --transport http --server-url "$MCP_URL" \
+            --method tools/call --tool-name detect_anomalies \
+            --tool-args-json '{"dataset":"sales_sample","column":"revenue"}' \
+            --format json | tee /tmp/detect-anomalies.json
+          jq -e '.result.content[0].text | fromjson | .anomaly_count == 3 and ([.anomalies[].value] | sort == [420,450,9000])' /tmp/detect-anomalies.json
+
+      - name: Call generate_report through MCP Inspector
+        run: |
+          set -euo pipefail
+          npx --yes @modelcontextprotocol/inspector@latest --cli \
+            --transport http --server-url "$MCP_URL" \
+            --method tools/call --tool-name generate_report \
+            --tool-args-json '{"dataset":"sales_sample"}' \
+            --format json | tee /tmp/generate-report.json
+          jq -e '.result.content[0].text | fromjson | .row_count == 20 and .data_quality.empty_cells == 0 and .data_quality.total_cells == 140' /tmp/generate-report.json
