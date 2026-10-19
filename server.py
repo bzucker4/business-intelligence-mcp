@@ -4,6 +4,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
+from mcp.types import ToolAnnotations
 from starlette.requests import Request
 from starlette.responses import HTMLResponse
 
@@ -16,50 +17,104 @@ from bi_mcp.analytics import (
 )
 
 ROOT_DIR = Path(__file__).resolve().parent
-mcp = FastMCP("Business Intelligence MCP Connector")
+mcp = FastMCP("Business Intelligence Copilot")
+
+
+def _read_demo_page(filename: str) -> HTMLResponse:
+    """Read a fixed, repository-owned HTML page."""
+    page = (ROOT_DIR / "demo" / filename).read_text(encoding="utf-8")
+    return HTMLResponse(page)
 
 
 @mcp.custom_route("/", methods=["GET"])
 async def demo_home(request: Request) -> HTMLResponse:
-    """Serve the customer-facing sample dashboard at the service root."""
-    page = (ROOT_DIR / "demo" / "index.html").read_text(encoding="utf-8")
-    return HTMLResponse(page)
+    """Serve the customer-facing sample dashboard."""
+    return _read_demo_page("index.html")
 
 
 @mcp.custom_route("/sample-report", methods=["GET"])
 async def sample_report(request: Request) -> HTMLResponse:
-    """Serve a print-friendly sample report using only the bundled fictional CSV."""
-    page = (ROOT_DIR / "demo" / "sample-report.html").read_text(encoding="utf-8")
-    return HTMLResponse(page)
+    """Serve a print-friendly report generated from fictional bundled sample data."""
+    return _read_demo_page("sample-report.html")
 
 
-@mcp.tool()
+@mcp.custom_route("/privacy", methods=["GET"])
+async def privacy_policy(request: Request) -> HTMLResponse:
+    """Serve the public privacy policy."""
+    return _read_demo_page("privacy.html")
+
+
+@mcp.custom_route("/support", methods=["GET"])
+async def support_page(request: Request) -> HTMLResponse:
+    """Serve support and security-reporting guidance."""
+    return _read_demo_page("support.html")
+
+
+READ_ONLY = ToolAnnotations(
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+)
+
+
+@mcp.tool(
+    title="List sample datasets",
+    annotations=READ_ONLY,
+)
 def list_datasets() -> dict:
-    """List CSV datasets bundled in the data folder, including row counts and columns."""
+    """List fictional CSV datasets bundled with this service, including row counts and column names.
+    Use this first to discover which sample dataset names and columns are available.
+    This tool does not access user uploads, connected drives, or private business systems.
+    """
     return {"datasets": _list()}
 
 
-@mcp.tool()
+@mcp.tool(
+    title="Search sample records",
+    annotations=READ_ONLY,
+)
 def search_records(dataset: str, query: str, column: str | None = None, limit: int = 10) -> dict:
-    """Search CSV records case-insensitively. Optionally restrict search to one column."""
+    """Search a bundled sample CSV for a case-insensitive text match.
+    Use dataset from list_datasets; optionally restrict the search to a column.
+    The result includes match counts and at most 100 records. Empty column means search all columns.
+    This tool cannot search user uploads or external business systems.
+    """
     return _search(dataset, query, column, limit)
 
 
-@mcp.tool()
+@mcp.tool(
+    title="Analyze a numeric column",
+    annotations=READ_ONLY,
+)
 def analyze_dataset(dataset: str, column: str) -> dict:
-    """Calculate descriptive statistics for a numeric column, ignoring non-numeric cells."""
+    """Calculate count, sum, mean, median, minimum, and maximum for a numeric column in a bundled sample CSV.
+    Non-numeric and empty cells are excluded from numeric calculations and counted separately.
+    Use dataset and column names returned by list_datasets. This tool does not infer causation or forecast results.
+    """
     return _analyze(dataset, column)
 
 
-@mcp.tool()
+@mcp.tool(
+    title="Flag unusual numeric values",
+    annotations=READ_ONLY,
+)
 def detect_anomalies(dataset: str, column: str) -> dict:
-    """Flag numeric outliers using 1.5×IQR fences; flags are not proof of errors."""
+    """Flag potential numeric outliers in a bundled sample CSV using the 1.5×IQR rule.
+    Returns the fences, flagged rows, and descriptive statistics. Flags are review candidates, not proof of errors.
+    Use dataset and column names returned by list_datasets.
+    """
     return _anomalies(dataset, column)
 
 
-@mcp.tool()
+@mcp.tool(
+    title="Generate a sample data report",
+    annotations=READ_ONLY,
+)
 def generate_report(dataset: str) -> dict:
-    """Generate an evidence-based summary of CSV columns, numeric values, and empty cells."""
+    """Generate a descriptive report for a bundled sample CSV, including columns, numeric summaries, and empty-cell counts.
+    This is a descriptive summary of the observed sample only; it does not establish causes or forecast performance.
+    """
     return _report(dataset)
 
 
