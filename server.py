@@ -50,17 +50,20 @@ async def support_page(request: Request) -> HTMLResponse:
     return _read_demo_page("support.html")
 
 
-READ_ONLY = ToolAnnotations(
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=False,
-)
+def _read_only_annotations(title: str) -> ToolAnnotations:
+    """Return complete annotations for a read-only tool."""
+    return ToolAnnotations(
+        title=title,
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    )
 
 
 @mcp.tool(
     title="List sample datasets",
-    annotations=READ_ONLY,
+    annotations=_read_only_annotations("List sample datasets"),
 )
 def list_datasets() -> dict:
     """List fictional CSV datasets bundled with this service, including row counts and column names.
@@ -72,7 +75,7 @@ def list_datasets() -> dict:
 
 @mcp.tool(
     title="Search sample records",
-    annotations=READ_ONLY,
+    annotations=_read_only_annotations("Search sample records"),
 )
 def search_records(dataset: str, query: str, column: str | None = None, limit: int = 10) -> dict:
     """Search a bundled sample CSV for a case-insensitive text match.
@@ -85,7 +88,7 @@ def search_records(dataset: str, query: str, column: str | None = None, limit: i
 
 @mcp.tool(
     title="Analyze a numeric column",
-    annotations=READ_ONLY,
+    annotations=_read_only_annotations("Analyze a numeric column"),
 )
 def analyze_dataset(dataset: str, column: str) -> dict:
     """Calculate count, sum, mean, median, minimum, and maximum for a numeric column in a bundled sample CSV.
@@ -97,7 +100,7 @@ def analyze_dataset(dataset: str, column: str) -> dict:
 
 @mcp.tool(
     title="Flag unusual numeric values",
-    annotations=READ_ONLY,
+    annotations=_read_only_annotations("Flag unusual numeric values"),
 )
 def detect_anomalies(dataset: str, column: str) -> dict:
     """Flag potential numeric outliers in a bundled sample CSV using the 1.5×IQR rule.
@@ -109,7 +112,7 @@ def detect_anomalies(dataset: str, column: str) -> dict:
 
 @mcp.tool(
     title="Generate a sample data report",
-    annotations=READ_ONLY,
+    annotations=_read_only_annotations("Generate a sample data report"),
 )
 def generate_report(dataset: str) -> dict:
     """Generate a descriptive report for a bundled sample CSV, including columns, numeric summaries, and empty-cell counts.
